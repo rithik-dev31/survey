@@ -1,0 +1,217 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SurveyLens | Sign In</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Inter", sans-serif;
+        }
+
+        body {
+            background: #f7f7f7;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .card {
+            background: #ffffff;
+            padding: 40px 35px;
+            border-radius: 18px;
+            border: 1px solid #e5e5e5;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #222;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            color: #6d6d6d;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+
+        /* Message Box */
+        #message-box {
+            display:none;
+            padding:12px;
+            border-radius:10px;
+            margin-bottom:15px;
+            font-size:14px;
+            text-align:center;
+        }
+        .error { background:#ffe6e6; color:#b30000; }
+        .success { background:#e6ffe6; color:#008000; }
+
+        .input-group {
+            text-align: left;
+            margin-bottom: 18px;
+        }
+
+        .input-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 14px;
+            margin-top: 6px;
+            border: 1.5px solid #dcdcdc;
+            border-radius: 10px;
+            outline: none;
+            font-size: 15px;
+            transition: 0.3s ease;
+        }
+
+        .input-group input:focus {
+            border-color: #6c63ff;
+        }
+
+        .btn {
+            width: 100%;
+            background: #6c63ff;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background: #5a55e6;
+        }
+
+        .spinner {
+            width:18px;height:18px;
+            border:3px solid white;
+            border-top:3px solid transparent;
+            border-radius:50%;
+            animation:spin 0.8s linear infinite;
+            display:inline-block;
+            vertical-align:middle;
+            margin-right:8px;
+        }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        .footer-text {
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .footer-text a {
+            color: #6c63ff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <div class="card">
+
+        <h2 class="title">SurveyLens</h2>
+        <p class="subtitle">Sign in to your account</p>
+
+        <div id="message-box"></div>
+
+        <form id="loginForm">
+            {% csrf_token %}
+
+            <div class="input-group">
+                <label>Username</label>
+                <input type="text" name="username" required>
+            </div>
+
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" name="password" required>
+            </div>
+
+            <button class="btn" id="loginBtn" type="submit">Sign In</button>
+        </form>
+
+        <p class="footer-text">
+            Don’t have an account? <a href="{% url 'signup' %}">Create one</a>
+        </p>
+
+    </div>
+</div>
+
+
+<script>
+    const form = document.getElementById("loginForm");
+    const msgBox = document.getElementById("message-box");
+    const loginBtn = document.getElementById("loginBtn");
+
+    form.addEventListener("submit", function(e) {
+        e.preventDefault();
+
+        const data = new FormData(form);
+
+        loginBtn.disabled = true;
+        loginBtn.innerHTML = `<span class="spinner"></span> Signing in...`;
+
+        fetch("{% url 'signin' %}", {
+            method: "POST",
+            body: data
+        })
+        .then(res => res.json())
+        .then(data => {
+            msgBox.style.display = "block";
+
+            if (data.status === "error") {
+                msgBox.className = "error";
+                msgBox.textContent = data.message;
+
+                loginBtn.disabled = false;
+                loginBtn.textContent = "Sign In";
+            } 
+            else {
+                msgBox.className = "success";
+                msgBox.textContent = data.message;
+
+                setTimeout(() => {
+                      window.location.href = data.redirect === "admin_page"
+            ? "{% url 'welcome' %}"       // superuser redirect
+            : "{% url 'public_dashboard' %}"; 
+                }, 1200);
+            }
+        })
+        .catch(() => {
+            msgBox.style.display = "block";
+            msgBox.className = "error";
+            msgBox.textContent = "Something went wrong!";
+            loginBtn.disabled = false;
+            loginBtn.textContent = "Sign In";
+        });
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,783 @@
+<!-- templates/admin_chatbot.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Chatbot — SurveyLens</title>
+
+  <style>
+
+
+    *{
+      scrollbar-width: none;
+      scroll-behavior: smooth;
+    }
+    :root{
+      --primary: #1e40af;
+      --primary-400: #3b82f6;
+      --primary-600: #1d4ed8;
+      --accent: #06b6d4;
+      --accent-400: #22d3ee;
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --border-hover: #cbd5e1;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --success: #10b981;
+      --success-400: #34d399;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+    }
+
+    *{box-sizing:border-box;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;}
+    body{margin:0;background:linear-gradient(135deg,var(--bg-primary) 0%,#e2e8f0 100%);color:var(--text-primary);font-size:15px;line-height:1.5;font-weight:400;overflow-x:hidden}
+
+    /* Enhanced Top bar */
+    .topbar{
+      height:72px;
+      background:linear-gradient(135deg,var(--primary) 0%,var(--primary-600) 100%);
+      color:white;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 32px;
+      box-shadow:var(--shadow-xl);
+      position:sticky;top:0;z-index:100;
+    }
+    .brand{display:flex;align-items:center;gap:16px}
+    .brand h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-0.025em}
+    .brand div{font-size:13px;opacity:0.9;font-weight:500}
+    .top-actions{display:flex;align-items:center;gap:12px}
+    .logout-btn{
+      background:linear-gradient(135deg,rgba(239,68,68,0.9),rgba(220,38,38,0.9));
+      border:none;color:white;padding:12px 20px;border-radius:var(--radius-md);cursor:pointer;
+      font-weight:500;transition:all 0.2s cubic-bezier(0.4,0,0.2,1);
+      box-shadow:var(--shadow-md);
+    }
+    .logout-btn:hover{
+      transform:translateY(-1px);
+      box-shadow:var(--shadow-xl);
+      background:linear-gradient(135deg,#ef4444,#dc2626);
+    }
+
+    /* Enhanced Layout */
+    .app-wrap{
+      max-width:1400px;margin:40px auto;
+      display:grid;grid-template-columns:340px 1fr;gap:32px;padding:0 24px;
+      min-height:calc(100vh - 140px);
+    }
+    .card{
+      background:var(--surface);
+      border-radius:var(--radius-lg);
+      box-shadow:var(--shadow-xl);
+      overflow:hidden;
+      border:1px solid var(--border);
+      transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    .card:hover{box-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);}
+
+    /* Enhanced Sidebar */
+    .sidebar{height:calc(85vh);display:flex;flex-direction:column}
+    .sidebar-header{
+      padding:24px 28px;
+      border-bottom:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;
+      background:linear-gradient(90deg,var(--bg-secondary),#fefefe);
+    }
+    .sidebar-header h3{margin:0;font-size:20px;font-weight:700;color:var(--text-primary)}
+    .new-survey-btn{
+      background:linear-gradient(135deg,var(--accent),var(--accent-400));
+      border:none;color:white;padding:12px 20px;border-radius:var(--radius-md);
+      cursor:pointer;font-weight:600;font-size:14px;transition:all 0.2s;
+      box-shadow:var(--shadow-md);
+    }
+    .new-survey-btn:hover{
+      transform:translateY(-2px);
+      box-shadow:var(--shadow-xl);
+    }
+
+    .search-box{padding:20px 28px;border-bottom:1px solid var(--border);background:var(--bg-secondary)}
+    .search-box input{
+      width:100%;padding:14px 20px;border-radius:var(--radius-lg);
+      border:2px solid var(--border);font-size:15px;
+      transition:all 0.2s cubic-bezier(0.4,0,0.2,1);
+      background:var(--bg-secondary);
+    }
+    .search-box input:focus{
+      outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgb(59 130 246 / 0.1);
+    }
+
+    .history-list{overflow:auto;padding:0;flex:1;background:var(--bg-primary)}
+    .history-item{
+      display:flex;flex-direction:column;gap:8px;
+      padding:24px 28px;cursor:pointer;margin:0;
+      border:1px solid transparent;transition:all 0.2s;
+      border-left:4px solid transparent;
+    }
+    .history-item:hover{
+      background:var(--bg-secondary);
+      border-color:var(--border-hover);
+      transform:translateX(4px);
+      box-shadow:var(--shadow-md);
+    }
+    .history-item.active{
+      background:linear-gradient(135deg,#eff6ff,#dbeafe);
+      border-left-color:var(--primary);
+      box-shadow:var(--shadow-lg);
+    }
+    .history-title{font-weight:700;font-size:16px;color:var(--text-primary);line-height:1.3}
+    .history-meta{font-size:13px;color:var(--text-muted);font-weight:500;letter-spacing:0.025em}
+
+    /* Enhanced Chat area */
+    .chat-area{display:flex;flex-direction:column;height:calc(85vh)}
+    .chat-header{
+      padding:28px 32px;
+      border-bottom:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;
+      background:linear-gradient(90deg,var(--bg-secondary),#fefefe);
+    }
+    .chat-title{font-size:24px;font-weight:700;color:var(--text-primary);margin:0}
+    .chat-sub{font-size:14px;color:var(--text-secondary);font-weight:500;margin-top:4px}
+
+    .messages{
+      flex:1;padding:32px;overflow:auto;
+      background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);
+      display:flex;flex-direction:column;gap:20px;
+      scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+    }
+    .messages::-webkit-scrollbar{width:6px}
+    .messages::-webkit-scrollbar-track{background:transparent}
+    .messages::-webkit-scrollbar-thumb{
+      background:var(--border);border-radius:3px;
+    }
+    .messages::-webkit-scrollbar-thumb:hover{background:var(--border-hover)}
+
+    .msg{
+      max-width:75%;padding:20px 24px;border-radius:var(--radius-lg);
+      line-height:1.55;font-size:15px;font-weight:500;
+      box-shadow:var(--shadow-sm);
+      position:relative;
+      animation:msgSlideIn 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    @keyframes msgSlideIn{
+      from{opacity:0;transform:translateY(20px);}
+      to{opacity:1;transform:translateY(0);}
+    }
+    .msg.admin{
+      margin-left:auto;background:linear-gradient(135deg,#eff6ff,#dbeafe);
+      border-bottom-right-radius:6px;
+      box-shadow:var(--shadow-md);
+    }
+    .msg.bot{
+      margin-right:auto;background:linear-gradient(135deg,#f8fafc,#f1f5f9);
+      border-bottom-left-radius:6px;
+      box-shadow:var(--shadow-sm);
+    }
+    .small{font-size:13px;color:var(--text-muted);margin-top:12px;font-style:italic}
+
+    .input-area{
+      padding:28px 32px;
+      border-top:1px solid var(--border);
+      display:flex;gap:16px;align-items:center;
+      background:var(--bg-secondary);
+    }
+    .input-box{flex:1;display:flex;gap:12px;align-items:stretch}
+    #chat-input{
+      flex:1;padding:18px 24px;border-radius:var(--radius-lg);
+      border:2px solid var(--border);font-size:15px;
+      background:var(--surface);font-weight:500;
+      transition:all 0.2s cubic-bezier(0.4,0,0.2,1);
+    }
+    #chat-input:focus{
+      outline:none;border-color:var(--primary);
+      box-shadow:0 0 0 3px rgb(30 64 175 / 0.1);
+    }
+    .send-button{
+      background:linear-gradient(135deg,var(--primary),var(--primary-400));
+      border:none;color:white;padding:18px 28px;border-radius:var(--radius-lg);
+      cursor:pointer;font-weight:600;font-size:15px;
+      box-shadow:var(--shadow-lg);
+      transition:all 0.2s cubic-bezier(0.4,0,0.2,1);
+      min-width:80px;
+    }
+    .send-button:hover:not(:disabled){
+      transform:translateY(-2px);
+      box-shadow:var(--shadow-xl);
+    }
+    .send-button:active:not(:disabled){transform:translateY(-1px)}
+
+    /* Enhanced typing indicator */
+    .typing{display:inline-flex;gap:8px;align-items:center;padding:20px}
+    .dot{
+      width:10px;height:10px;border-radius:50%;
+      background:linear-gradient(135deg,var(--text-muted),var(--text-secondary));
+      animation:blink 1.4s infinite ease-in-out;
+    }
+    .dot:nth-child(2){animation-delay:0.2s}
+    .dot:nth-child(3){animation-delay:0.4s}
+    @keyframes blink{
+      0%,80%,100%{transform:scale(0.8);opacity:0.5;}
+      40%{transform:scale(1);opacity:1;}
+    }
+
+    /* Enhanced small helpers */
+    .muted{color:var(--text-muted);font-size:14px;font-weight:500}
+    .center{display:flex;align-items:center;justify-content:center;min-height:100px}
+
+    /* Enhanced Disabled states */
+    #chat-input:disabled,
+    .send-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform:none !important;
+    }
+
+    .send-button.complete {
+      background:linear-gradient(135deg,var(--success),var(--success-400)) !important;
+      box-shadow:0 4px 14px 0 rgb(16 185 129 / 0.4) !important;
+    }
+
+    /* Responsive Design */
+    @media (max-width:1024px){
+      .app-wrap{grid-template-columns:1fr;gap:24px;padding:0 20px}
+      .sidebar{order:2;height:300px}
+      .chat-area{order:1;height:70vh}
+      .topbar{padding:0 24px}
+    }
+    
+    @media (max-width:768px){
+      .app-wrap{margin:24px auto;padding:0 16px}
+      .sidebar{height:280px}
+      .chat-area{height:65vh}
+      .topbar{padding:0 20px;height:64px}
+      .brand h1{font-size:20px}
+      .input-area{padding:20px 24px;flex-direction:column}
+      .input-box{width:100%}
+      .send-button{width:100%;margin-top:12px}
+    }
+
+    /* Custom scrollbar for sidebar */
+    .history-list::-webkit-scrollbar{width:4px}
+    .history-list::-webkit-scrollbar-track{background:var(--bg-primary)}
+    .history-list::-webkit-scrollbar-thumb{
+      background:var(--border);border-radius:2px;
+    }
+    .history-list::-webkit-scrollbar-thumb:hover{background:var(--border-hover)}
+  </style>
+</head>
+<body>
+  <!-- top bar -->
+  <div class="topbar">
+    <div class="brand">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect width="24" height="24" rx="8" fill="white" opacity="0.12"></rect>
+        <path d="M6 12h12M6 7h12M6 17h8" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <h1 style="color:white;margin:0">SurveyLens Admin</h1>
+        <div style="font-size:13px;color:rgba(255,255,255,0.9)">Survey Chatbot</div>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <form method="POST" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="logout-btn">Logout</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- main grid -->
+  <div class="app-wrap">
+    <!-- SIDEBAR -->
+    <div class="card sidebar">
+      <div class="sidebar-header">
+        <h3>Surveys</h3>
+        <button id="quick-new" class="new-survey-btn">New</button>
+      </div>
+
+      <div class="search-box">
+        <input id="search-input" placeholder="Search surveys..." />
+      </div>
+
+      <div class="history-list" id="history-list">
+        <div class="center muted" id="history-loading">Loading surveys…</div>
+      </div>
+    </div>
+
+    <!-- CHAT AREA -->
+    <div class="card chat-area">
+      <div class="chat-header">
+        <div>
+          <div class="chat-title" id="chat-title">Admin Chat</div>
+          <div class="chat-sub" id="chat-sub">Ask to create a survey — the bot will request filters if needed</div>
+        </div>
+        <div class="muted" id="selected-meta"></div>
+      </div>
+
+      <div class="messages" id="messages" aria-live="polite">
+        <div class="center muted" id="welcome">Welcome — ask me to create a survey (e.g. "Create a canteen feedback survey for students in Chennai").</div>
+      </div>
+
+      <div class="input-area">
+        <div class="input-box">
+          <input id="chat-input" placeholder="Type your message..." autocomplete="off" />
+        </div>
+        <button id="send-btn" class="send-button">Send</button>
+      </div>
+    </div>
+  </div>
+<script>
+const API_CHAT = "/administator/admin_chatbot_api/";
+const API_SURVEYS = "/administator/api/surveys/";
+const API_SURVEY_DETAIL = "/administator/api/surveys/";
+
+let surveys = [];
+let selectedSurveyId = null;
+let isProcessing = false;
+let isReportChatMode = false;
+let currentPdfUrl = null;
+
+const historyList = document.getElementById("history-list");
+const messagesEl = document.getElementById("messages");
+const sendBtn = document.getElementById("send-btn");
+const inputEl = document.getElementById("chat-input");
+const chatTitle = document.getElementById("chat-title");
+const chatSub = document.getElementById("chat-sub");
+const quickNewBtn = document.getElementById("quick-new");
+const searchInput = document.getElementById("search-input");
+
+// ---------- UI helpers ----------
+
+function appendMessage(text, sender = "bot") {
+  document.getElementById("welcome")?.remove();
+  const div = document.createElement("div");
+  div.className = `msg ${sender}`;
+
+  if (typeof text === "string") {
+    div.textContent = text;
+  } else if (typeof text === "object" && text.type === "survey") {
+    let content = `${text.title}\n`;
+    text.questions.forEach((q, i) => {
+      content += `${i + 1}. ${q.question}\n`;
+      if (q.options && q.options.length) {
+        content += `Options: ${q.options.join(", ")}\n`;
+      }
+    });
+    div.textContent = content;
+  }
+
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function showTyping() {
+  const div = document.getElementById("typing");
+  if (div) return; // Prevent duplicates
+  
+  const typingDiv = document.createElement("div");
+  typingDiv.id = "typing";
+  typingDiv.className = "msg bot";
+  typingDiv.innerHTML = `
+    <div class="typing">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>`;
+  messagesEl.appendChild(typingDiv);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function hideTyping() {
+  document.getElementById("typing")?.remove();
+}
+
+function lockInterface() {
+  inputEl.disabled = true;
+  sendBtn.disabled = true;
+  sendBtn.textContent = "✓ Survey Complete";
+  sendBtn.style.background = "var(--success)";
+  sendBtn.style.cursor = "default";
+  sendBtn.classList.add("complete");
+}
+
+function unlockInterface() {
+  inputEl.disabled = false;
+  sendBtn.disabled = false;
+  sendBtn.textContent = "Send";
+  sendBtn.style.background = "var(--primary)";
+  sendBtn.style.cursor = "pointer";
+  sendBtn.classList.remove("complete");
+}
+
+function showPdfDownloadButton(pdfUrl, title) {
+  // Remove existing PDF button
+  document.querySelector(".pdf-download-btn")?.remove();
+  
+  const btn = document.createElement("div");
+  btn.className = "pdf-download-btn";
+  btn.innerHTML = `
+    <button onclick="window.open('${pdfUrl}', '_blank')" class="pdf-btn" title="Download ${title} Report">
+      📄 Download PDF Report
+    </button>
+  `;
+  messagesEl.parentNode.insertBefore(btn, messagesEl.nextSibling);
+}
+
+function enterReportChatMode(surveyId, title, chatHistory = [], pdfUrl = null) {
+  isReportChatMode = true;
+  selectedSurveyId = surveyId;
+  currentPdfUrl = pdfUrl;
+  chatTitle.textContent = `${title} - Report Q&A`;
+  chatSub.textContent = "Ask questions about survey results, trends, or insights...";
+  unlockInterface();
+  
+  // ✅ NEW: Show full chat history instead of welcome message
+  messagesEl.innerHTML = "";
+  
+  if (chatHistory && chatHistory.length > 0) {
+    chatHistory.forEach(msg => {
+      appendMessage(msg.message, msg.sender === "admin" ? "admin" : "bot");
+    });
+  } else {
+    appendMessage("Welcome to report analysis! Ask me about survey results, trends, or specific questions.", "bot");
+  }
+  
+  // ✅ NEW: Show PDF download button
+  if (pdfUrl) {
+    showPdfDownloadButton(pdfUrl, title);
+  }
+}
+
+function exitReportChatMode() {
+  isReportChatMode = false;
+  selectedSurveyId = null;
+  currentPdfUrl = null;
+  document.querySelector(".pdf-download-btn")?.remove();
+}
+
+// ---------- Sidebar: load and render history ----------
+async function loadSurveys() {
+  try {
+    const res = await fetch(API_SURVEYS);
+    surveys = await res.json();
+    historyList.innerHTML = "";
+
+    if (!surveys.length) {
+      historyList.innerHTML = `<div class="center muted">No surveys found</div>`;
+      return;
+    }
+
+    surveys.forEach((s) => {
+      const item = document.createElement("div");
+      item.className = "history-item";
+      item.dataset.id = s.id;
+      
+      // ✅ NEW: Show report indicator
+      const reportBadge = s.has_report ? '<span class="report-badge">📊</span>' : '';
+      
+      item.innerHTML = `
+        <div class="history-title">${reportBadge} ${s.title}</div>
+        <div class="history-meta">
+          ${s.age_group || "All ages"} •
+          ${s.location || "All locations"} •
+          ${s.occupation || "Any occupation"}
+          ${s.has_report ? ' • <span class="report-status">Report Ready</span>' : ''}
+        </div>
+      `;
+      item.onclick = () => loadSurveyChat(s.id);
+      historyList.appendChild(item);
+    });
+  } catch (err) {
+    console.error(err);
+    historyList.innerHTML = `<div class="center muted">Error loading surveys</div>`;
+  }
+}
+
+async function loadSurveyChat(id) {
+  selectedSurveyId = id;
+
+  // highlight sidebar item
+  document.querySelectorAll(".history-item").forEach(i => i.classList.remove("active"));
+  const item = document.querySelector(`.history-item[data-id="${id}"]`);
+  item?.classList.add("active");
+
+  try {
+    const res = await fetch(`${API_SURVEY_DETAIL}${id}/`);
+    const survey = await res.json();
+
+    // ✅ UPDATED: Handle both creation and report modes with full history
+    if (survey.has_report && survey.block === "show") {
+      // Enter PDF Q&A mode with full history and PDF URL
+      enterReportChatMode(survey.id, survey.title, survey.chat_history, survey.pdf_download_url);
+      return;
+    }
+
+    // Regular survey detail (non-report)
+    chatTitle.textContent = survey.title;
+    chatSub.textContent = `Survey details — ${survey.questions.length} questions`;
+    messagesEl.innerHTML = "";
+    document.querySelector(".pdf-download-btn")?.remove(); // Remove PDF button
+
+    if (survey.block === "hide" || survey.status === "created") {
+      lockInterface();
+      appendMessage("✅ Survey already created and published. View-only mode.", "bot");
+    } else {
+      unlockInterface();
+    }
+
+    // show chat history if exists
+    if (survey.chat_history && survey.chat_history.length) {
+      survey.chat_history.forEach(msg => {
+        appendMessage(msg.message, msg.sender === "admin" ? "admin" : "bot");
+      });
+    } else {
+      appendMessage("Survey questions:", "bot");
+      survey.questions.forEach((q, i) => {
+        let line = `${i + 1}. ${q.question}`;
+        if (q.options && q.options.length) {
+          line += " Options: " + q.options.join(", ");
+        }
+        appendMessage(line, "bot");
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    appendMessage("Error loading survey details.", "bot");
+  }
+}
+
+// ---------- Chat send ----------
+async function sendMessage(newSurvey = false) {
+  if (isProcessing || inputEl.disabled) return;
+  
+  const text = inputEl.value.trim();
+  if (!text && !newSurvey) return;
+
+  // For normal messages, echo admin message
+  if (!newSurvey) {
+    appendMessage(text, "admin");
+  }
+
+  inputEl.value = "";
+  isProcessing = true;
+  showTyping();
+
+  try {
+    const body = {
+      message: text,
+      new_survey: newSurvey
+    };
+
+    // ✅ NEW: Include survey_id for report chat mode
+    if (selectedSurveyId && isReportChatMode) {
+      body.survey_id = selectedSurveyId;
+    }
+
+    const res = await fetch(API_CHAT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    hideTyping();
+
+    // ✅ UPDATED: Handle PDF Q&A responses with continuous history + PDF
+    if (data.status === "pdf_qa") {
+      appendMessage(data.message, "bot");
+      chatSub.textContent = `Report Q&A • ${data.mode}`;
+      
+      // ✅ NEW: Update PDF button and history
+      if (data.pdf_download_url) {
+        currentPdfUrl = data.pdf_download_url;
+        showPdfDownloadButton(data.pdf_download_url, data.title);
+      }
+      
+      // ✅ NEW: Update chat history if provided
+      if (data.chat_history) {
+        // Future enhancement: sync full history
+        console.log("Updated chat history:", data.chat_history);
+      }
+      return;
+    }
+
+    // Handle survey creation block
+    if (data.block === "hide") {
+      lockInterface();
+      appendMessage("✅ Survey created and ready! Check the sidebar for all surveys.", "bot");
+      loadSurveys();
+      isProcessing = false;
+      return;
+    }
+
+    // Unlock if previously blocked (for new survey/reset cases)
+    if (inputEl.disabled && !isReportChatMode) {
+      unlockInterface();
+    }
+
+    // Handle other statuses
+    if (data.status === "need_filter") {
+      appendMessage(data.message, "bot");
+    } else if (data.status === "survey_preview") {
+      appendMessage(
+        { type: "survey", title: data.title, questions: data.questions },
+        "bot"
+      );
+      appendMessage("Type 'ok' to save or 'regenerate' to generate new questions.", "bot");
+    } else if (data.status === "created") {
+      appendMessage(data.message || "Survey created successfully!", "bot");
+      loadSurveys();
+    } else if (data.status === "empty") {
+      if (data.message) appendMessage(data.message, "bot");
+    } else if (data.status === "error") {
+      appendMessage(data.message || "Server error.", "bot");
+    } else if (data.status === "reset") {
+      appendMessage(data.message || "Hi admin, let's create a new survey!", "bot");
+      exitReportChatMode(); // Exit report mode on reset
+    } else if (data.status === "no_users") {
+      appendMessage(data.message || "No public users found for these filters. Please try different filters.", "bot");
+    } else {
+      appendMessage(data.message || "Response received.", "bot");
+    }
+  } catch (err) {
+    console.error(err);
+    hideTyping();
+    appendMessage("Error communicating with server.", "bot");
+  }
+
+  isProcessing = false;
+}
+
+// ---------- Event listeners ----------
+
+sendBtn.addEventListener("click", () => sendMessage(false));
+inputEl.addEventListener("keydown", e => {
+  if (e.key === "Enter") sendMessage(false);
+});
+
+// New survey handling
+quickNewBtn.addEventListener("click", () => {
+  // Exit report mode and start fresh
+  exitReportChatMode();
+  messagesEl.innerHTML = "";
+  chatTitle.textContent = "New Survey";
+  chatSub.textContent = "Creating new survey...";
+  unlockInterface();
+  sendMessage(true);
+});
+
+// Search functionality
+searchInput.addEventListener("input", () => {
+  const q = searchInput.value.toLowerCase();
+  document.querySelectorAll(".history-item").forEach(item => {
+    item.style.display = item.textContent.toLowerCase().includes(q) ? "block" : "none";
+  });
+});
+
+// Add global shortcut for new survey (Ctrl/Cmd + N)
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+    e.preventDefault();
+    quickNewBtn.click();
+  }
+});
+
+// initial load
+loadSurveys();
+</script>
+
+<style>
+/* ✅ NEW: Report chat styles */
+.report-badge {
+  background: #10b981;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.report-status {
+  color: #10b981;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.history-item.active {
+  background: var(--primary-light);
+  border-left: 3px solid var(--primary);
+}
+
+.msg.bot {
+  background: var(--gray-50);
+}
+
+.msg.admin {
+  background: var(--primary);
+  color: white;
+  margin-left: auto;
+  text-align: right;
+}
+
+/* ✅ NEW: PDF Download Button */
+.pdf-download-btn {
+  padding: 12px 20px;
+  text-align: center;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+.pdf-btn {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.pdf-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+/* Typing indicator */
+.typing {
+  display: flex;
+  gap: 4px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gray-400);
+  animation: typing 1.4s infinite;
+}
+
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-10px); }
+}
+</style>
+
+</body>
+</html>

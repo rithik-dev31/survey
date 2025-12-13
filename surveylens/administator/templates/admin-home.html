@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SurveyLens Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: "Inter", sans-serif;
+            overflow-x: hidden;
+        }
+        
+        /* Mobile sidebar overlay */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+        }
+        
+        .sidebar-overlay.active {
+            display: block;
+        }
+        
+        /* Fixed sidebar for desktop */
+        #sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 30;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+        }
+        
+        /* Main content with margin to accommodate fixed sidebar */
+        main {
+            margin-left: 256px; /* 64px * 4 = 256px (w-64 sidebar width) */
+            transition: margin-left 0.3s ease;
+        }
+        
+        /* Hide sidebar and adjust main content on mobile */
+        @media (max-width: 768px) {
+            #sidebar {
+                transform: translateX(-100%);
+            }
+            
+            #sidebar.active {
+                transform: translateX(0);
+            }
+            
+            main {
+                margin-left: 0;
+            }
+        }
+        
+        /* Custom scrollbar for sidebar */
+        #sidebar::-webkit-scrollbar {
+            width: 5px;
+        }
+        
+        #sidebar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        #sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+        
+        #sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Stat card icon styles */
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+        
+        .analytics-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+        }
+
+        /* Survey History Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+        }
+        
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid #e5e7eb;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px 12px 0 0;
+        }
+        
+        .modal-body {
+            padding: 24px;
+        }
+        
+        .close {
+            color: white;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            opacity: 0.7;
+        }
+    </style>
+</head>
+
+<body class="bg-[#f5f7fb] min-h-screen">
+    <!-- Mobile sidebar overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Survey History Modal -->
+    <div id="surveyHistoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close" id="closeModal">&times;</span>
+                <h2 class="text-2xl font-bold mb-0">📋 Survey History</h2>
+                <p class="text-white/90 mt-1 mb-0">All your created surveys</p>
+            </div>
+            <div class="modal-body">
+                <div id="surveyHistoryList" class="space-y-3">
+                    <!-- Dynamic survey history will be loaded here -->
+                    <div class="text-center py-12 text-gray-500">
+                        <i class="fas fa-spinner fa-spin text-2xl mb-4 block"></i>
+                        Loading surveys...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIDEBAR (Now fixed on desktop) -->
+    <aside id="sidebar" class="w-64 bg-[#0f1f3e] text-white p-6 space-y-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/20 p-2 rounded-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 10-14 0 7 7 0 0014 0z" />
+                    </svg>
+                </div>
+                <h1 class="text-xl font-semibold">SurveyLens</h1>
+            </div>
+            
+            <!-- Close button for mobile -->
+            <button id="closeSidebar" class="md:hidden text-white">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <nav class="space-y-4 text-gray-300 mt-8">
+            <a href="{% url 'welcome' %}" class="flex items-center space-x-3 hover:text-white hover:bg-white/10 p-3 rounded-lg transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4m-4 0H9" />
+                </svg>
+                <span>Dashboard</span>
+            </a>
+
+            <a href="#" class="flex items-center space-x-3 hover:text-white hover:bg-white/10 p-3 rounded-lg transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18" />
+                </svg>
+                <span>Surveys</span>
+            </a>
+
+            <a href="#" class="flex items-center space-x-3 hover:text-white hover:bg-white/10 p-3 rounded-lg transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 3v18m-8-9h16" />
+                </svg>
+                <span>Analytics</span>
+            </a>
+
+            <a href="#" class="flex items-center space-x-3 hover:text-white hover:bg-white/10 p-3 rounded-lg transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Reports</span>
+            </a>
+
+            <a href="#" class="flex items-center space-x-3 hover:text-white hover:bg-white/10 p-3 rounded-lg transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2" />
+                </svg>
+                <span>Settings</span>
+            </a>
+            
+            <!-- Chatbot link in sidebar -->
+            <a href="{% url 'admin_chatbot_page' %}" class="flex items-center space-x-3 hover:text-white hover:bg-white/10 p-3 rounded-lg transition-colors mt-6 border-t border-gray-700 pt-4">
+                <i class="fas fa-robot w-5 h-5"></i>
+                <span>AI Survey Creator</span>
+            </a>
+        </nav>
+        
+        <!-- User profile section in sidebar -->
+        <div class="mt-auto pt-6 border-t border-gray-700">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
+                    <span class="font-semibold">OC</span>
+                </div>
+                <div class="flex-1">
+                    <p class="font-medium">Olivia Chen</p>
+                    <p class="text-sm text-gray-400">Admin</p>
+                </div>
+                <a href="{% url 'logout' %}" class="text-gray-400 hover:text-white" title="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT (Scrollable area) -->
+    <main class="flex-1 p-4 md:p-10 min-h-screen overflow-y-auto">
+        <!-- HEADER with mobile menu toggle -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <div class="flex items-center justify-between w-full md:w-auto">
+                <div class="flex items-center space-x-3">
+                    <!-- Mobile menu toggle button -->
+                    <button id="toggleSidebar" class="md:hidden p-2 rounded-md bg-gray-200">
+                        <i class="fas fa-bars text-gray-700"></i>
+                    </button>
+                    
+                    <div>
+                        <h2 class="text-2xl md:text-3xl font-bold text-[#1b1f24]">Welcome back,<strong>{{ request.user.username }}</strong></h2>
+                        <p class="text-gray-500 text-sm md:text-base mt-1">
+                            Manage surveys, responses, analytics, and reports easily
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUICK ACTIONS -->
+            <div class="flex flex-wrap gap-3 w-full md:w-auto">
+                <!-- Create New Survey button - links to admin chatbot page -->
+                <a href="{% url 'admin_chatbot_page' %}" class="bg-blue-500 hover:bg-blue-600 text-white px-4 md:px-6 py-2 rounded-lg shadow-md flex-1 md:flex-none text-sm md:text-base text-center no-underline hover:no-underline">
+                    <i class="fas fa-plus-circle mr-2"></i>Create New Survey
+                </a>
+                
+                <!-- Download Reports button -->
+                <button class="bg-blue-100 hover:bg-blue-200 text-blue-600 px-4 md:px-6 py-2 rounded-lg shadow-md flex-1 md:flex-none text-sm md:text-base" onclick="alert('Reports download feature coming soon!')">
+                    <i class="fas fa-download mr-2"></i>Download Reports
+                </button>
+                
+                <!-- Survey History button -->
+                <button id="surveyHistoryBtn" class="border border-gray-300 hover:bg-gray-200 text-gray-700 px-4 md:px-6 py-2 rounded-lg shadow-md flex-1 md:flex-none text-sm md:text-base">
+                    <i class="fas fa-history mr-2"></i>Survey History
+                </button>
+            </div>
+        </div>
+
+        <!-- STATS GRID -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <!-- Total Surveys Created -->
+            <div class="bg-white rounded-xl shadow p-4 md:p-6">
+                <div class="stat-icon bg-blue-100 text-blue-600">
+                    <i class="fas fa-clipboard-list text-xl"></i>
+                </div>
+                <p class="text-gray-500 text-xs md:text-sm">Total Surveys Created</p>
+                <h3 class="text-2xl md:text-3xl font-bold mt-1 md:mt-2" data-stat="total_surveys">0</h3>
+                <div class="flex items-center mt-2">
+                    <span class="text-green-500 text-sm mr-1">
+                        <i class="fas fa-arrow-up mr-1"></i>12%
+                    </span>
+                    <span class="text-gray-500 text-xs">from last month</span>
+                </div>
+            </div>
+
+            <!-- Total Responses Received -->
+            <div class="bg-white rounded-xl shadow p-4 md:p-6">
+                <div class="stat-icon bg-green-100 text-green-600">
+                    <i class="fas fa-comment-dots text-xl"></i>
+                </div>
+                <p class="text-gray-500 text-xs md:text-sm">Total Responses Received</p>
+                <h3 class="text-2xl md:text-3xl font-bold mt-1 md:mt-2" data-stat="total_responses">0</h3>
+                <div class="flex items-center mt-2">
+                    <span class="text-green-500 text-sm mr-1">
+                        <i class="fas fa-arrow-up mr-1"></i>8%
+                    </span>
+                    <span class="text-gray-500 text-xs">from last week</span>
+                </div>
+            </div>
+
+            <!-- Successful Reports Generated -->
+            <div class="bg-white rounded-xl shadow p-4 md:p-6">
+                <div class="stat-icon bg-purple-100 text-purple-600">
+                    <i class="fas fa-chart-bar text-xl"></i>
+                </div>
+                <p class="text-gray-500 text-xs md:text-sm">Successful Reports Generated</p>
+                <h3 class="text-2xl md:text-3xl font-bold mt-1 md:mt-2" data-stat="total_reports">0</h3>
+                <div class="flex items-center mt-2">
+                    <span class="text-green-500 text-sm mr-1">
+                        <i class="fas fa-arrow-up mr-1"></i>15%
+                    </span>
+                    <span class="text-gray-500 text-xs">from last month</span>
+                </div>
+            </div>
+
+            <!-- Pending Reports -->
+            <div class="bg-white rounded-xl shadow p-4 md:p-6">
+                <div class="stat-icon bg-yellow-100 text-yellow-600">
+                    <i class="fas fa-clock text-xl"></i>
+                </div>
+                <p class="text-gray-500 text-xs md:text-sm">Pending Reports</p>
+                <h3 class="text-2xl md:text-3xl font-bold mt-1 md:mt-2" data-stat="pending_reports">0</h3>
+                <div class="flex items-center mt-2">
+                    <span class="text-red-500 text-sm mr-1">
+                        <i class="fas fa-arrow-down mr-1"></i>3
+                    </span>
+                    <span class="text-gray-500 text-xs">since yesterday</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROW 2 -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mt-4 md:mt-6">
+            <!-- Active Surveys -->
+            <div class="bg-white rounded-xl shadow p-4 md:p-6">
+                <div class="stat-icon bg-indigo-100 text-indigo-600">
+                    <i class="fas fa-chart-line text-xl"></i>
+                </div>
+                <p class="text-gray-500 text-xs md:text-sm">Active Surveys</p>
+                <h3 class="text-2xl md:text-3xl font-bold mt-1 md:mt-2" data-stat="active_surveys">0</h3>
+                <div class="flex items-center mt-2">
+                    <span class="text-green-500 text-sm mr-1">
+                        <i class="fas fa-arrow-up mr-1"></i>5
+                    </span>
+                    <span class="text-gray-500 text-xs">new this week</span>
+                </div>
+            </div>
+
+            <!-- Today's New Responses -->
+            <div class="bg-white rounded-xl shadow p-4 md:p-6">
+                <div class="stat-icon bg-cyan-100 text-cyan-600">
+                    <i class="fas fa-calendar-day text-xl"></i>
+                </div>
+                <p class="text-gray-500 text-xs md:text-sm">Today's New Responses</p>
+                <h3 class="text-2xl md:text-3xl font-bold mt-1 md:mt-2" data-stat="today_responses">0</h3>
+                <div class="flex items-center mt-2">
+                    <span class="text-green-500 text-sm mr-1">
+                        <i class="fas fa-arrow-up mr-1"></i>24%
+                    </span>
+                    <span class="text-gray-500 text-xs">from yesterday</span>
+                </div>
+            </div>
+
+            <!-- Completion Rate -->
+            <div class="bg-white rounded-xl shadow p-4 md:p-6">
+                <div class="stat-icon bg-emerald-100 text-emerald-600">
+                    <i class="fas fa-percentage text-xl"></i>
+                </div>
+                <p class="text-gray-500 text-xs md:text-sm">Completion Rate</p>
+                <h3 class="text-2xl md:text-3xl font-bold mt-1 md:mt-2" data-stat="completion_rate">0%</h3>
+                <div class="flex items-center mt-2">
+                    <span class="text-green-500 text-sm mr-1">
+                        <i class="fas fa-arrow-up mr-1"></i>2%
+                    </span>
+                    <span class="text-gray-500 text-xs">from last month</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANALYTICS OVERVIEW -->
+        <div class="mt-8 md:mt-12">
+            <div class="bg-white rounded-xl md:rounded-2xl shadow-xl p-6 md:p-10 max-w-3xl mx-auto">
+                <h3 class="text-xl md:text-2xl font-bold mb-6 text-center">Analytics Overview</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-10 mb-8">
+                    <!-- Total Responses Card -->
+                    <div class="text-center p-4 rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
+                        <div class="analytics-icon bg-blue-100 text-blue-600">
+                            <i class="fas fa-comments text-lg"></i>
+                        </div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Total Responses</h4>
+                        <p class="text-2xl font-bold text-blue-600 mb-1" data-analytic="total_responses">0M</p>
+                        <div class="text-sm text-gray-500">
+                            <span class="text-green-500">
+                                <i class="fas fa-arrow-up mr-1"></i>8% growth
+                            </span>
+                        </div>
+                        <div class="mt-3 text-xs text-gray-500">
+                            Across all surveys
+                        </div>
+                    </div>
+                    
+                    <!-- Average Response Rate Card -->
+                    <div class="text-center p-4 rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
+                        <div class="analytics-icon bg-green-100 text-green-600">
+                            <i class="fas fa-chart-pie text-lg"></i>
+                        </div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Avg Response Rate</h4>
+                        <p class="text-2xl font-bold text-green-600 mb-1" data-analytic="avg_response_rate">68.5%</p>
+                        <div class="text-sm text-gray-500">
+                            <span class="text-green-500">
+                                <i class="fas fa-arrow-up mr-1"></i>3.2% increase
+                            </span>
+                        </div>
+                        <div class="mt-3 text-xs text-gray-500">
+                            Last 30 days average
+                        </div>
+                    </div>
+                    
+                    <!-- Top Surveys Card -->
+                    <div class="text-center p-4 rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
+                        <div class="analytics-icon bg-purple-100 text-purple-600">
+                            <i class="fas fa-trophy text-lg"></i>
+                        </div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Top Surveys</h4>
+                        <p class="text-2xl font-bold text-purple-600 mb-1" data-analytic="top_surveys">12</p>
+                        <div class="text-sm text-gray-500">
+                            <span class="text-blue-500">
+                                <i class="fas fa-eye mr-1"></i>High engagement
+                            </span>
+                        </div>
+                        <div class="mt-3 text-xs text-gray-500">
+                            Over 10K responses each
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Dynamic Chart visualization -->
+                <div class="bg-gray-50 rounded-xl p-4 mb-8" id="chartContainer">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-semibold text-gray-700">Response Trend (Last 7 Days)</h4>
+                        <span class="text-sm text-gray-500">
+                            <i class="fas fa-calendar-alt mr-1"></i>This week
+                        </span>
+                    </div>
+                    
+                    <!-- Dynamic bar chart will be rendered here -->
+                    <div id="responseChart" class="flex items-end justify-between h-32 mt-4">
+                        <!-- Bars will be dynamically generated -->
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <a href="{% url 'admin_chatbot_page' %}" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-6 md:px-8 py-2 md:py-3 rounded-full shadow-lg text-sm md:text-base inline-block no-underline hover:no-underline">
+                        <i class="fas fa-robot mr-2"></i>Create Survey with AI Assistant
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Surveys Section - DYNAMIC -->
+        <div class="mt-8">
+            <div class="bg-white rounded-xl shadow p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold">Recent Surveys</h3>
+                    <a href="{% url 'admin_chatbot_page' %}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        <i class="fas fa-plus mr-1"></i>Create New
+                    </a>
+                </div>
+                <div id="recentSurveysContainer" class="space-y-4">
+                    <!-- Dynamic recent surveys will be loaded here -->
+                    <div class="text-center py-12 text-gray-500">
+                        <i class="fas fa-spinner fa-spin text-2xl mb-4 block"></i>
+                        Loading recent surveys...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="text-gray-500 text-xs md:text-sm text-center mt-8 md:mt-10 py-6">
+            SurveyLens Admin Panel • © 2025 All Rights Reserved
+        </footer>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const toggleSidebar = document.getElementById('toggleSidebar');
+            const closeSidebar = document.getElementById('closeSidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            const mainContent = document.querySelector('main');
+            const surveyHistoryBtn = document.getElementById('surveyHistoryBtn');
+            const surveyHistoryModal = document.getElementById('surveyHistoryModal');
+            const closeModal = document.getElementById('closeModal');
+            const recentSurveysContainer = document.getElementById('recentSurveysContainer');
+            
+            let dashboardStats = null;
+
+            // Fetch and update dashboard stats
+            async function fetchDashboardStats() {
+                try {
+                    const response = await fetch('/administator/admin-dashboard-stats/');
+                    dashboardStats = await response.json();
+                    
+                    // Update main stat cards
+                    const statElements = {
+                        'total_surveys': document.querySelector('[data-stat="total_surveys"]'),
+                        'total_responses': document.querySelector('[data-stat="total_responses"]'),
+                        'total_reports': document.querySelector('[data-stat="total_reports"]'),
+                        'pending_reports': document.querySelector('[data-stat="pending_reports"]'),
+                        'active_surveys': document.querySelector('[data-stat="active_surveys"]'),
+                        'today_responses': document.querySelector('[data-stat="today_responses"]'),
+                        'completion_rate': document.querySelector('[data-stat="completion_rate"]')
+                    };
+                    
+                    Object.entries(statElements).forEach(([key, element]) => {
+                        if (element && dashboardStats[key] !== undefined) {
+                            if (key === 'total_responses') {
+                                element.textContent = dashboardStats[key].toLocaleString();
+                            } else if (key === 'completion_rate') {
+                                element.textContent = dashboardStats[key];
+                            } else {
+                                element.textContent = dashboardStats[key];
+                            }
+                        }
+                    });
+
+                    // Update analytics overview cards
+                    const analyticElements = {
+                        'total_responses': document.querySelector('[data-analytic="total_responses"]'),
+                        'avg_response_rate': document.querySelector('[data-analytic="avg_response_rate"]'),
+                        'top_surveys': document.querySelector('[data-analytic="top_surveys"]')
+                    };
+                    
+                    Object.entries(analyticElements).forEach(([key, element]) => {
+                        if (element && dashboardStats[key] !== undefined) {
+                            if (key === 'total_responses') {
+                                element.textContent = (dashboardStats[key] / 1000000).toFixed(1) + 'M';
+                            } else {
+                                element.textContent = dashboardStats[key];
+                            }
+                        }
+                    });
+
+                    // Update recent surveys section
+                    updateRecentSurveys();
+
+                    // Update response trend chart
+                    updateResponseChart();
+
+                } catch (error) {
+                    console.error('Failed to fetch stats:', error);
+                    recentSurveysContainer.innerHTML = `
+                        <div class="text-center py-12 text-gray-500">
+                            <i class="fas fa-exclamation-triangle text-2xl mb-4 block"></i>
+                            Failed to load data. Please refresh the page.
+                        </div>
+                    `;
+                }
+            }
+
+            // Update recent surveys
+            function updateRecentSurveys() {
+                if (dashboardStats && dashboardStats.recent_surveys && dashboardStats.recent_surveys.length > 0) {
+                    recentSurveysContainer.innerHTML = dashboardStats.recent_surveys.map(survey => `
+                        <div class="flex items-center justify-between p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 ${survey.status_class} rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-poll text-xs"></i>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-medium text-gray-900 truncate" title="${survey.title}">${survey.title}</p>
+                                    <p class="text-sm text-gray-500">${survey.created_ago} • ${survey.responses.toLocaleString()} responses</p>
+                                </div>
+                            </div>
+                            <span class="${survey.status_class.replace('bg-', ' ').replace('text-', 'bg- text-')} text-xs px-2 py-1 rounded-full font-medium">${survey.status}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    recentSurveysContainer.innerHTML = `
+                        <div class="text-center py-12 text-gray-500">
+                            <i class="fas fa-inbox text-4xl mb-4 block opacity-50"></i>
+                            <p class="text-lg mb-2">No surveys yet</p>
+                            <p>Create your first survey with AI assistant!</p>
+                        </div>
+                    `;
+                }
+            }
+
+            // Update dynamic response chart
+            function updateResponseChart() {
+                const chartContainer = document.getElementById('responseChart');
+                const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                
+                if (dashboardStats && dashboardStats.response_trend) {
+                    const maxHeight = 120;
+                    const maxValue = Math.max(...dashboardStats.response_trend, 1);
+                    
+                    chartContainer.innerHTML = days.map((day, index) => {
+                        const value = dashboardStats.response_trend[index] || 0;
+                        const heightPercent = (value / maxValue) * 100;
+                        const barHeight = Math.max(heightPercent * maxHeight / 100, 8);
+                        
+                        return `
+                            <div class="flex flex-col items-center">
+                                <div class="w-8 md:w-10 bg-gradient-to-t from-blue-500 to-blue-600 rounded-t-md shadow-sm transition-all duration-500 hover:scale-105" style="height: ${barHeight}px" title="${value} responses"></div>
+                                <span class="text-xs mt-2 text-gray-500 font-medium">${day}</span>
+                                ${value > 0 ? `<span class="text-xs text-blue-600 font-bold mt-1">${value}</span>` : ''}
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            // Survey History Modal
+            function showSurveyHistory() {
+                const surveyHistoryList = document.getElementById('surveyHistoryList');
+                
+                if (dashboardStats && dashboardStats.survey_history && dashboardStats.survey_history.length > 0) {
+                    surveyHistoryList.innerHTML = dashboardStats.survey_history.map(survey => `
+                        <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 hover:shadow-md transition-all duration-200">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-12 h-12 ${survey.status_class} rounded-xl flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-poll text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-lg text-gray-900 mb-1">${survey.title}</h4>
+                                        <div class="flex flex-wrap gap-2 text-sm text-gray-600 mb-2">
+                                            <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">${survey.age_group || 'N/A'}</span>
+                                            <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">${survey.location || 'N/A'}</span>
+                                            <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">${survey.occupation || 'N/A'}</span>
+                                        </div>
+                                        <p class="text-sm text-gray-500">${survey.created_ago} • ${survey.responses.toLocaleString()} responses</p>
+                                    </div>
+                                </div>
+                                <span class="${survey.status_class} text-xs px-3 py-1 rounded-full font-semibold">${survey.status}</span>
+                            </div>
+                            <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                                <div class="text-sm text-gray-500">
+                                    ID: #${survey.id}
+                                </div>
+                                <div class="flex gap-2">
+                                    ${survey.has_report ? `
+                                        <span class="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs rounded-full font-medium">
+                                            <i class="fas fa-file-pdf mr-1"></i>Report Ready
+                                        </span>
+                                    ` : ''}
+                                    <a href="/admin/survey/${survey.id}/" class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center">
+                                        <i class="fas fa-eye mr-1"></i>View
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    surveyHistoryList.innerHTML = `
+                        <div class="text-center py-16 text-gray-500">
+                            <i class="fas fa-inbox text-5xl mb-6 block opacity-50"></i>
+                            <h3 class="text-2xl font-bold mb-2 text-gray-700">No surveys yet</h3>
+                            <p class="mb-6">Get started by creating your first survey!</p>
+                            <a href="{% url 'admin_chatbot_page' %}" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-full font-medium inline-flex items-center">
+                                <i class="fas fa-robot mr-2"></i>Create First Survey
+                            </a>
+                        </div>
+                    `;
+                }
+                
+                surveyHistoryModal.style.display = 'block';
+            }
+
+            // Event Listeners
+            surveyHistoryBtn.addEventListener('click', showSurveyHistory);
+            closeModal.addEventListener('click', () => {
+                surveyHistoryModal.style.display = 'none';
+            });
+            
+            surveyHistoryModal.addEventListener('click', (e) => {
+                if (e.target === surveyHistoryModal) {
+                    surveyHistoryModal.style.display = 'none';
+                }
+            });
+
+            // Toggle sidebar on mobile
+            toggleSidebar.addEventListener('click', function() {
+                sidebar.classList.add('active');
+                sidebarOverlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            });
+            
+            // Close sidebar when close button is clicked
+            closeSidebar.addEventListener('click', function() {
+                sidebar.classList.remove('active');
+                sidebarOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            });
+            
+            // Close sidebar when overlay is clicked
+            sidebarOverlay.addEventListener('click', function() {
+                sidebar.classList.remove('active');
+                sidebarOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            });
+            
+            // Close sidebar when clicking on a link (for mobile)
+            const navLinks = document.querySelectorAll('#sidebar nav a');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.remove('active');
+                        sidebarOverlay.classList.remove('active');
+                        document.body.style.overflow = '';
+                    }
+                });
+            });
+            
+            // Adjust layout on window resize
+            window.addEventListener('resize', function() {
+                if (window.innerWidth >= 768) {
+                    sidebar.classList.remove('active');
+                    sidebarOverlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            });
+            
+            // Add scroll-to-top button functionality
+            const scrollToTopButton = document.createElement('button');
+            scrollToTopButton.innerHTML = '<i class="fas fa-arrow-up"></i>';
+            scrollToTopButton.className = 'fixed bottom-6 right-6 bg-blue-600 text-white w-10 h-10 rounded-full shadow-lg flex items-center justify-center z-20 hover:bg-blue-700 transition-colors';
+            scrollToTopButton.style.display = 'none';
+            document.body.appendChild(scrollToTopButton);
+            
+            // Show/hide scroll-to-top button
+            mainContent.addEventListener('scroll', function() {
+                if (mainContent.scrollTop > 300) {
+                    scrollToTopButton.style.display = 'flex';
+                } else {
+                    scrollToTopButton.style.display = 'none';
+                }
+            });
+            
+            // Scroll to top functionality
+            scrollToTopButton.addEventListener('click', function() {
+                mainContent.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+
+            // Load stats on page load and refresh every 30 seconds
+            fetchDashboardStats();
+            setInterval(fetchDashboardStats, 30000);
+        });
+    </script>
+</body>
+</html>
