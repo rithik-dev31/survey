@@ -125,7 +125,7 @@ surveylens/
 2. **Report Generation**: GPT-4.1-mini for creating HTML reports from survey data
 
 ### Configuration
-- API keys stored in code (security risk - should use environment variables)
+- Create your own api key from OpenAI and add to .env file
 - Model: gpt-4.1-mini
 - Temperature: 0.0-0.2
 - Max tokens: 500-2000
